@@ -182,11 +182,12 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if method == 'GET':
             
             # check if the url exists in the path
-            if self.url_exists(requested_url):
+            if self.url_exists(requested_url) or self.url_exists(requested_url + '/'):
                 status_code = 200
 
                 # if the url does not end with '/ and it is an html page, redirect it to the correct url
-                if not requested_url.endswith('/') and not (requested_url.endswith('.html') or requested_url.endswith('.css')):
+                if (not requested_url.endswith('/') and 
+                    not (requested_url.endswith('.html') or requested_url.endswith('.css'))):
                     status_code = 301
             # if it does not exist in the path, return Not Found
             else:
@@ -196,7 +197,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
         else:
             status_code = 405
         
-
         return status_code
     
     
@@ -263,7 +263,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
         return html_page
     
-    def build_header(self, status_code, url):
+    def build_header(self, status_code, url, redirect_url=None):
         '''
             Builds the header of the response. Currently missing the Content-Length 
             and Location fields, which will be updated accordingly.
@@ -278,6 +278,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
         status = f'HTTP/1.1 {status_code} {self.get_statuses()[status_code]["message"]}\r\n'
         date = 'Date: ' + self.get_date() + '\r\n'
         content_type = 'Content-Type: ' + self.get_content_type(url) + '\r\n'
+
+        if status_code == 301:
+            location = f'Location: {redirect_url}\r\n'
+
         header = status + date + content_type
 
         return header
@@ -292,7 +296,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
             Returns:
                 True if the url exists in the paths dictionary, False otherwise
         '''
-
         return url in self.get_paths().keys()
 
     def get_body(self, status_code, requested_url):
@@ -308,7 +311,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
                             for the appropriate status code
         '''
         
-
         # if code is 200, read the file 
         if status_code == 200:
             paths = self.get_paths()
@@ -367,7 +369,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
         status_code = self.get_status_code(method, url)
 
         # get the header 
-        header = self.build_header(status_code, url)
+        if status_code == 301:
+            header = self.build_header(status_code, url, url + '/')
+        else:
+            header = self.build_header(status_code, url)
 
         # get the body
         body = self.get_body(status_code, url)
