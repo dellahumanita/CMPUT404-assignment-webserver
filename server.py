@@ -1,4 +1,5 @@
 #  coding: utf-8 
+from multiprocessing import connection
 import socketserver
 import os 
 from datetime import datetime
@@ -275,14 +276,15 @@ class MyWebServer(socketserver.BaseRequestHandler):
             Returns:
                 header (str): the starter header of the response
         '''
-        status = f'HTTP/1.1 {status_code} {self.get_statuses()[status_code]["message"]}\r\n'
-        date = 'Date: ' + self.get_date() + '\r\n'
-        content_type = 'Content-Type: ' + self.get_content_type(url) + '\r\n'
+        header = ''
+        header += f'HTTP/1.1 {status_code} {self.get_statuses()[status_code]["message"]}\r\n'
+        header += 'Date: ' + self.get_date() + '\r\n'
+        header += 'Server: ServingTheWeb\r\n'
+        header += 'Connection: close\r\n'
+        header += 'Content-Type: ' + self.get_content_type(url) + '\r\n'
 
         if status_code == 301:
-            location = f'Location: {redirect_url}\r\n'
-
-        header = status + date + content_type
+            header += f'Location: {redirect_url}\r\n'
 
         return header
     
@@ -343,8 +345,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
             Returns:
                 response (str): the complete response 
         '''
-
-        content_length = f'Content-Length: {len(body)}\r\n'
+        body_in_bytes = body.encode('utf-8')
+        content_length = f'Content-Length: {len(body_in_bytes)}\r\n'
 
         header += content_length + '\r\n'
         response = header + body
